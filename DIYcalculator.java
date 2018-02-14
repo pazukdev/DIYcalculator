@@ -10,24 +10,119 @@ import java.util.regex.Pattern;
 
 public class DIYcalculator {
 
+    private static String expression;
 
-    static boolean errorDetected = false;
+    private static boolean errorDetected = false;
+    private static Scanner scanner;
 
-    static Scanner scanner;
+    private static void inputBasicCheck(String expression) { // at first - check inputted expression for
+                                                             // some elementary syntax errors
+
+        Pattern pattern=Pattern.compile("^[0-9\\s\\(\\)\\*\\+\\.,^/-]");
+        Pattern patternOperandsOnly=Pattern.compile("^[0-9\\s\\.,]");
+        Pattern patternOperatorsOnly=Pattern.compile("^[\\s\\(\\)\\*\\+\\.,^/-]");
+        Matcher matcher;
+
+        String[] expressionArray=expression.split("");
+
+        int digitCounter=0;
+        int operatorCounter=0;
+        int openBracketCounter=0;
+        int closeBracketCounter=0;
+
+        int i=0;
+        while (i<expressionArray.length) {
+            matcher=pattern.matcher(expressionArray[i]);
+            if(!matcher.matches()) {
+                System.out.println("Wrong expression input. Not allowed characters are detected");
+                errorDetected=true;
+                return;
+            }
+            matcher=patternOperandsOnly.matcher(expressionArray[i]);
+            if(matcher.matches()) {
+                digitCounter++;
+            }
+
+            matcher=patternOperatorsOnly.matcher(expressionArray[i]);
+            if(matcher.matches()) {
+                operatorCounter++;
+            }
+
+            if(expressionArray[i].equals("(")) {
+                openBracketCounter++;
+            }
+
+            if(expressionArray[i].equals(")")) {
+                closeBracketCounter++;
+            }
+
+            i++;
+        }
+
+        if(digitCounter==expression.length()) {
+            System.out.println("This is an incomplete mathematical expression: no operators");
+            errorDetected=true;
+            return;
+        }
+
+        if(operatorCounter==expression.length()) {
+            System.out.println("This is incomplete mathematical expression: no operands");
+            errorDetected=true;
+            return;
+        }
+
+        if(openBracketCounter!=closeBracketCounter) {
+            System.out.println("Error in the expression: check if the brackets are positioned correctly");
+            errorDetected=true;
+            return;
+        }
+
+        i=0;
+        while (i<expression.length()) {
+            if(expression.charAt(i)=='(' || expression.charAt(i)==')') { // check if the first bracket in...
+                if(expression.charAt(i)==')') { // ...extension is not close bracket
+                    System.out.println("Error in the expression: check if the brackets are positioned correctly");
+                    errorDetected=true;
+                    return;
+                }
+                break;
+
+            }
+            i++;
+        }
+
+        if(expression.length()<3) {
+            System.out.println("This is incomplete mathematical expression");
+            errorDetected=true;
+        }
+
+    }
+
+    private static String modifyExpression(String expression) { // change inputed expression to the form convenient for
+                                                              // further processing and evaluating with shunting yard
+                                                              // method, postfix notation and postfix evaluation
+                                                              // algorithm
+        expression=expression.replace(',', '.');
+        expression=expression.replace("(-", "(0-");
+        if(expression.charAt(0)=='-') {
+            expression="0"+expression;
+        }
+        return expression;
+    }
 
 
 
-    static boolean isDelimeter(char c) {
+    private static boolean isDelimeter(char c) {
         return c == ' ';
     }
 
 
-    static boolean isOperator(char c) {
+    private static boolean isOperator(char c) {
         return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
     }
 
 
-    static int priority(char operator) {
+    private static int priority(char operator) {
         switch (operator) {
             case '+':
                 return 1;
@@ -48,7 +143,7 @@ public class DIYcalculator {
     }
 
 
-    static void processOperator(LinkedList<Double> numbersStack, char operator) {
+    private static void processOperator(LinkedList<Double> numbersStack, char operator) {
         Double topNumber = numbersStack.removeLast();
         Double nextTopNumber = numbersStack.removeLast();
         switch (operator) {
@@ -71,7 +166,7 @@ public class DIYcalculator {
     }
 
 
-    public static Double evaluate(String exp) { // calculate with railway shunting yard method & reverse Polish notation
+    private static Double evaluate(String exp) { // calculate with railway shunting yard method & reverse Polish notation
 
 
         LinkedList<Double> operandsStack = new LinkedList<>();
@@ -105,7 +200,10 @@ public class DIYcalculator {
                     i++;
                 }
                 i--;
-                Pattern pattern=Pattern.compile("^([1-9]\\d*)|([1-9][0-9]*\\.\\d+)|(0\\.\\d+)");
+                Pattern pattern
+                        =Pattern.compile("^(0|[1-9]\\d*)|([1-9][0-9]*\\.\\d+)|(0\\.\\d+)"); // check is current
+                                                                                            // number correct or not
+
                 Matcher matcher=pattern.matcher(operand);
 
                 if(!matcher.matches()) {
@@ -125,67 +223,42 @@ public class DIYcalculator {
         while (!operatorsStack.isEmpty()) {
             processOperator(operandsStack, operatorsStack.removeLast());
         }
-
-        //System.out.println(operandsStack);
+        if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
+            System.out.print("Wrong input: error in the expression");
+            errorDetected=true;
+            return 0.0;
+        }
         return operandsStack.get(0);
     }
 
 
     public static void main(String[] args) {
 
-        String expression;
-        //expression = "(60,0+30,5+9,5)/10^2";
+        //expression = "10+100/20-500-2";
 
         scanner=new Scanner(System.in);
         expression=scanner.next();
         scanner.close();
 
+        inputBasicCheck(expression);
 
-
-
-
-
-        if(expression.length()>0) {
-
-            Pattern pattern=Pattern.compile("^[0-9\\s\\(\\)\\*\\+\\.,^/-]");
-            Matcher matcher;
-
-            String[] array=expression.split("");
-
-            int i=0;
-            while (i<array.length) {
-                matcher=pattern.matcher(array[i]);
-                if(!matcher.matches()) {
-                    errorDetected=true;
-                    break;
-                }
-                i++;
-            }
-
+        if(errorDetected) {
+            System.err.println("Wrong input");
+        } else {
+            expression=modifyExpression(expression);
+            System.out.println(expression+" =");
+            Double result=evaluate(expression);
 
             if(errorDetected) {
-                System.out.println("Wrong expression input");
+                System.out.println("Wrong number input");
             } else {
-
-                expression=expression.replace(',', '.');
-                System.out.println(expression);
-
-                Double result=evaluate(expression);
-
-                if(errorDetected) {
-                    System.out.println("Wrong number input");
-                } else {
-                    System.out.println("Result: "+result);
-                    if(result.isInfinite()) {
-                        System.out.println("Division by zero");
-                    } else if(result.isNaN()) {
-                        System.out.println("Division of zero by zero or any other case which led to Not-a-Number result");
-                    }
+                System.out.println("Result: "+result);
+                if(result.isInfinite()) {
+                    System.err.println("Division by zero");
+                } else if(result.isNaN()) {
+                    System.err.println("Division of zero by zero or any other case which led to Not-a-Number result");
                 }
             }
-
-        } else {
-            System.out.println("Empty expression");
         }
 
 
