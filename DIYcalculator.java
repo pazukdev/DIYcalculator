@@ -110,13 +110,6 @@ public class DIYcalculator {
         return expression;
     }
 
-
-
-    private static boolean isDelimeter(char c) {
-        return c == ' ';
-    }
-
-
     private static boolean isOperator(char c) {
         return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
     }
@@ -173,10 +166,6 @@ public class DIYcalculator {
         LinkedList<Character> operatorsStack = new LinkedList<>();
         for (int i = 0; i < exp.length(); i++) {
             char c = exp.charAt(i);
-            //if (isDelimeter(c)) {
-            //   continue;
-            //}
-
             if (c == '(')
                 operatorsStack.add('(');
             else if (c == ')') {
