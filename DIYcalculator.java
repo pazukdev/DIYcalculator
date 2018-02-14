@@ -105,25 +105,15 @@ public class DIYcalculator {
                     i++;
                 }
                 i--;
-                Pattern pattern=Pattern.compile("^(\\d+)|([1-9][0-9]*\\.\\d+)|(0\\.\\d+)|(0,\\d+)");
+                Pattern pattern=Pattern.compile("^([1-9]\\d*)|([1-9][0-9]*\\.\\d+)|(0\\.\\d+)");
                 Matcher matcher=pattern.matcher(operand);
 
                 if(!matcher.matches()) {
                     errorDetected=true;
                     break;
-                } else {
-                    int g=0;
-                    while (g<operand.length()) {
-                        if(operand.charAt(g)==',') {
-                            operand=operand.replace(',', '.');
-
-                            break;
-                        }
-                        g++;
-                    }
-                    //System.out.println(operand);
-                    operandsStack.add(Double.parseDouble(operand));
                 }
+                operandsStack.add(Double.parseDouble(operand));
+
             }
         }
 
@@ -144,7 +134,7 @@ public class DIYcalculator {
     public static void main(String[] args) {
 
         String expression;
-        //expression = "11,6";
+        //expression = "(60,0+30,5+9,5)/10^2";
 
         scanner=new Scanner(System.in);
         expression=scanner.next();
@@ -157,7 +147,7 @@ public class DIYcalculator {
 
         if(expression.length()>0) {
 
-            Pattern pattern=Pattern.compile("^[0-9\\s\\(\\)\\*\\+\\.,^-]");
+            Pattern pattern=Pattern.compile("^[0-9\\s\\(\\)\\*\\+\\.,^/-]");
             Matcher matcher;
 
             String[] array=expression.split("");
@@ -172,9 +162,14 @@ public class DIYcalculator {
                 i++;
             }
 
+
             if(errorDetected) {
                 System.out.println("Wrong expression input");
             } else {
+
+                expression=expression.replace(',', '.');
+                System.out.println(expression);
+
                 Double result=evaluate(expression);
 
                 if(errorDetected) {
