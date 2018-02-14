@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 /**
  * Created by Pazuk on 12.02.2018.
  */
+
 public class DIYcalculator {
 
 
@@ -70,7 +71,7 @@ public class DIYcalculator {
     }
 
 
-    public static Double evaluate(String exp) {
+    public static Double evaluate(String exp) { // calculate with railway shunting yard method & reverse Polish notation
 
 
         LinkedList<Double> operandsStack = new LinkedList<>();
@@ -172,12 +173,12 @@ public class DIYcalculator {
             }
 
             if(errorDetected) {
-                System.out.println("Ошибка ввода выражения");
+                System.out.println("Wrong expression input");
             } else {
                 Double result=evaluate(expression);
 
                 if(errorDetected) {
-                    System.out.println("Ошибка в воде чисел 2");
+                    System.out.println("Wrong number input");
                 } else {
                     System.out.println("Result: "+result);
                     if(result.isInfinite()) {
@@ -189,7 +190,7 @@ public class DIYcalculator {
             }
 
         } else {
-            System.out.println("Вы не ввели никаких данных");
+            System.out.println("Empty expression");
         }
 
 
