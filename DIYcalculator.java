@@ -173,9 +173,9 @@ public class DIYcalculator {
         LinkedList<Character> operatorsStack = new LinkedList<>();
         for (int i = 0; i < exp.length(); i++) {
             char c = exp.charAt(i);
-            if (isDelimeter(c)) {
-                continue;
-            }
+            //if (isDelimeter(c)) {
+            //   continue;
+            //}
 
             if (c == '(')
                 operatorsStack.add('(');
@@ -192,7 +192,7 @@ public class DIYcalculator {
                 int count=0;
 
                 while (i < exp.length()) {
-                    if(Character.isDigit(exp.charAt(i)) || exp.charAt(i)=='.'){
+                    if(Character.isDigit(exp.charAt(i)) || exp.charAt(i)=='.' || exp.charAt(i)==' '){
                         operand+=exp.charAt(i);
                     } else {
                         break;
@@ -200,17 +200,29 @@ public class DIYcalculator {
                     i++;
                 }
                 i--;
+                // check is current number correct or not:
                 Pattern pattern
-                        =Pattern.compile("^(0|[1-9]\\d*)|([1-9][0-9]*\\.\\d+)|(0\\.\\d+)"); // check is current
-                                                                                            // number correct or not
+                        =Pattern.compile("^(\\s)|(\\s?(0|[1-9])\\d*\\s?)|(\\s?[1-9][0-9]*\\.\\d+\\s?)|(\\s?0\\.\\d+\\s?)");
 
                 Matcher matcher=pattern.matcher(operand);
 
                 if(!matcher.matches()) {
+                    System.out.println("Wrong format of number detected");
                     errorDetected=true;
                     break;
                 }
-                operandsStack.add(Double.parseDouble(operand));
+
+                if(!operand.equals(" ")) {
+                    if(operand.charAt(0)==' ') {
+                        operand=operand.substring(1);
+                    }
+
+                    if(operand.charAt(operand.length()-1)==' ') {
+                        operand=operand.substring(0, operand.length()-1);
+                    }
+
+                    operandsStack.add(Double.parseDouble(operand));
+                }
 
             }
         }
@@ -224,7 +236,7 @@ public class DIYcalculator {
             processOperator(operandsStack, operatorsStack.removeLast());
         }
         if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
-            System.out.print("Wrong input: error in the expression");
+            System.out.print("Error in the expression");
             errorDetected=true;
             return 0.0;
         }
@@ -234,7 +246,7 @@ public class DIYcalculator {
 
     public static void main(String[] args) {
 
-        //expression = "10+100/20-500-2";
+        //expression = "(17 ^ 4 + 5 * 974 ^ 33 + 2.24 * 4.75)^0";
 
         scanner=new Scanner(System.in);
         expression=scanner.next();
@@ -243,14 +255,14 @@ public class DIYcalculator {
         inputBasicCheck(expression);
 
         if(errorDetected) {
-            System.err.println("Wrong input");
+            System.err.println("Input error: wrong input");
         } else {
             expression=modifyExpression(expression);
             System.out.println(expression+" =");
             Double result=evaluate(expression);
 
             if(errorDetected) {
-                System.out.println("Wrong number input");
+                System.err.println("Input error: wrong input");
             } else {
                 System.out.println("Result: "+result);
                 if(result.isInfinite()) {
