@@ -1,4 +1,4 @@
-import javax.script.ScriptException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -11,6 +11,8 @@ import java.util.regex.Pattern;
 public class DIYcalculator {
 
     private static String expression;
+    private static ArrayList<String> expressionAsArrayList;
+    private  static  Double result;
 
     private static boolean errorDetected = false;
     private static Scanner scanner;
@@ -34,7 +36,7 @@ public class DIYcalculator {
         while (i<expressionArray.length) {
             matcher=pattern.matcher(expressionArray[i]);
             if(!matcher.matches()) {
-                System.out.println("Wrong expression input. Not allowed characters are detected");
+                System.out.println("Wrong expression input. Not allowed character detected: "+expressionArray[i]);
                 errorDetected=true;
                 return;
             }
@@ -72,7 +74,8 @@ public class DIYcalculator {
         }
 
         if(openBracketCounter!=closeBracketCounter) {
-            System.out.println("Error in the expression: check if the brackets are positioned correctly");
+            System.out.println("Error in the expression: wrong number of brackets " +
+                    "\nCheck if the brackets are positioned correctly");
             errorDetected=true;
             return;
         }
@@ -81,7 +84,8 @@ public class DIYcalculator {
         while (i<expression.length()) {
             if(expression.charAt(i)=='(' || expression.charAt(i)==')') { // check if the first bracket in...
                 if(expression.charAt(i)==')') { // ...extension is not close bracket
-                    System.out.println("Error in the expression: check if the brackets are positioned correctly");
+                    System.out.println("Error in the expression: first bracket shouldn't be closing " +
+                            "\ncheck if the brackets are positioned correctly");
                     errorDetected=true;
                     return;
                 }
@@ -103,15 +107,79 @@ public class DIYcalculator {
                                                               // method, postfix notation and postfix evaluation
                                                               // algorithm
         expression=expression.replace(',', '.');
-        expression=expression.replace("(-", "(0-");
-        if(expression.charAt(0)=='-') {
-            expression="0"+expression;
+
+        expressionAsArrayList =new ArrayList<>();
+
+        int u=0;
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+            if (c == '(') {
+                expressionAsArrayList.add(u, Character.toString(c));
+                u++;
+            }
+
+            else if (c == ')') {
+                expressionAsArrayList.add(u, Character.toString(c));
+                u++;
+            }
+
+            else if (isOperator(c)) {
+                expressionAsArrayList.add(u, Character.toString(c));
+                u++;
+            } else {
+
+                String operand = "";
+
+                while (i < expression.length() && expression.charAt(i)!='(' && expression.charAt(i)!=')'
+                        && !isOperator(expression.charAt(i))) {
+                    operand=operand+expression.charAt(i);
+                    i++;
+                }
+                i--;
+
+                expressionAsArrayList.add(u, operand);
+                u++;
+
+            }
+
         }
+
+        // System.out.println(expressionAsArrayList); // - show parsed string intermediate stage
+
+
+        if(expressionAsArrayList.get(0).equals("-")) {
+            expressionAsArrayList.set(1, "-"+expressionAsArrayList.get(1));
+            expressionAsArrayList.remove(0);
+        }
+
+        for(int i=0; i<expressionAsArrayList.size(); i++) {
+            String s=expressionAsArrayList.get(i);
+            if(s.equals(" ")) {
+                expressionAsArrayList.remove(i);
+            }
+        }
+
+        for(int i=2; i<expressionAsArrayList.size(); i++) {
+            String s0=expressionAsArrayList.get(i-2);
+            String s1=expressionAsArrayList.get(i-1);
+            String s2=expressionAsArrayList.get(i);
+
+            if(s1.equals("-") && (isBracket(s0.charAt(0)) || isOperator(s0.charAt(0)))) {
+                s1=s1+s2;
+                expressionAsArrayList.set(i-1, s1);
+                expressionAsArrayList.remove(i);
+            }
+        }
+
         return expression;
     }
 
     private static boolean isOperator(char c) {
         return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
+    }
+
+    private static boolean isBracket(char c) {
+        return c=='(' || c==')';
     }
 
 
@@ -159,60 +227,41 @@ public class DIYcalculator {
     }
 
 
-    private static Double evaluate(String exp) { // calculate with railway shunting yard method & reverse Polish notation
+    private static Double evaluate(ArrayList<String> expression) { // calculate with railway shunting yard method
+                                                                   // & reverse Polish notation
 
+        System.out.println("Parsed expression: "+expressionAsArrayList); // parsed input final stage
 
         LinkedList<Double> operandsStack = new LinkedList<>();
         LinkedList<Character> operatorsStack = new LinkedList<>();
-        for (int i = 0; i < exp.length(); i++) {
-            char c = exp.charAt(i);
-            if (c == '(')
+        for (int i = 0; i < expressionAsArrayList.size(); i++) {
+            String s=expressionAsArrayList.get(i);
+            if (s.equals("("))
                 operatorsStack.add('(');
-            else if (c == ')') {
+            else if (s.equals(")")) {
                 while (operatorsStack.getLast() != '(')
                     processOperator(operandsStack, operatorsStack.removeLast());
                 operatorsStack.removeLast();
-            } else if (isOperator(c)) {
-                while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(c))
+            } else if (s.length()==1 && isOperator(s.charAt(0))) {
+                while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s.charAt(0)))
                     processOperator(operandsStack, operatorsStack.removeLast());
-                operatorsStack.add(c);
+                operatorsStack.add(s.charAt(0));
             } else {
-                String operand = "";
-                int count=0;
+                String operand=s;
 
-                while (i < exp.length()) {
-                    if(Character.isDigit(exp.charAt(i)) || exp.charAt(i)=='.' || exp.charAt(i)==' '){
-                        operand+=exp.charAt(i);
-                    } else {
-                        break;
-                    }
-                    i++;
-                }
-                i--;
                 // check is current number correct or not:
                 Pattern pattern
-                        =Pattern.compile("^(\\s)|(\\s?(0|[1-9])\\d*\\s?)|(\\s?[1-9][0-9]*\\.\\d+\\s?)|(\\s?0\\.\\d+\\s?)");
+                        =Pattern.compile("^(\\s?\\-?(0|[1-9])\\d*\\s?)|(\\s?\\-?[1-9][0-9]*\\.\\d+\\s?)|(\\s?\\-?0\\.\\d+\\s?)");
+                        //=Pattern.compile("^.*"); // turn off numbers validity check
 
                 Matcher matcher=pattern.matcher(operand);
 
                 if(!matcher.matches()) {
-                    System.out.println("Wrong format of number detected");
+                    System.out.println("Wrong format of number detected: "+operand);
                     errorDetected=true;
                     break;
                 }
-
-                if(!operand.equals(" ")) {
-                    if(operand.charAt(0)==' ') {
-                        operand=operand.substring(1);
-                    }
-
-                    if(operand.charAt(operand.length()-1)==' ') {
-                        operand=operand.substring(0, operand.length()-1);
-                    }
-
-                    operandsStack.add(Double.parseDouble(operand));
-                }
-
+                operandsStack.add(Double.parseDouble(operand));
             }
         }
 
@@ -234,11 +283,12 @@ public class DIYcalculator {
 
 
     public static void main(String[] args) {
+        result=0.0;
 
-        //expression = "(17 ^ 4 + 5 * 974 ^ 33 + 2.24 * 4.75)^0";
+        //expression="(4 + 3) * 2 ^ -2"; // - inner input
 
         scanner=new Scanner(System.in);
-        expression=scanner.next();
+        expression=scanner.nextLine();
         scanner.close();
 
         inputBasicCheck(expression);
@@ -247,8 +297,7 @@ public class DIYcalculator {
             System.err.println("Input error: wrong input");
         } else {
             expression=modifyExpression(expression);
-            System.out.println(expression+" =");
-            Double result=evaluate(expression);
+            result=evaluate(expressionAsArrayList);
 
             if(errorDetected) {
                 System.err.println("Input error: wrong input");
@@ -261,8 +310,6 @@ public class DIYcalculator {
                 }
             }
         }
-
-
 
     }
 
