@@ -1,3 +1,4 @@
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
@@ -12,7 +13,7 @@ public class DIYcalculator {
 
     private static String expression;
     private static ArrayList<String> expressionAsArrayList;
-    private  static  Double result;
+    private  static  String result;
 
     private static boolean errorDetected = false;
     private static Scanner scanner;
@@ -20,7 +21,7 @@ public class DIYcalculator {
     private static void inputBasicCheck(String expression) { // at first - check inputted expression for
                                                              // some elementary syntax errors
 
-        Pattern pattern=Pattern.compile("^[0-9\\s\\(\\)\\*\\+\\.,^/-]");
+        Pattern patternValidCharacters=Pattern.compile("^[0-9\\s\\(\\)\\*\\+\\.,^/-]");
         Pattern patternOperandsOnly=Pattern.compile("^[0-9\\s\\.,]");
         Pattern patternOperatorsOnly=Pattern.compile("^[\\s\\(\\)\\*\\+\\.,^/-]");
         Matcher matcher;
@@ -34,7 +35,7 @@ public class DIYcalculator {
 
         int i=0;
         while (i<expressionArray.length) {
-            matcher=pattern.matcher(expressionArray[i]);
+            matcher=patternValidCharacters.matcher(expressionArray[i]);
             if(!matcher.matches()) {
                 System.out.println("Wrong expression input. Not allowed character detected: "+expressionArray[i]);
                 errorDetected=true;
@@ -102,6 +103,17 @@ public class DIYcalculator {
 
     }
 
+    private static boolean digitFinder(String s) {
+        String[] stringList=s.split("");
+        for(int i=0; i<s.length(); i++) {
+            if(stringList[i].matches("[0-9]")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
     private static String modifyExpression(String expression) { // change inputed expression to the form convenient for
                                                               // further processing and evaluating with shunting yard
                                                               // method, postfix notation and postfix evaluation
@@ -146,17 +158,32 @@ public class DIYcalculator {
 
         // System.out.println(expressionAsArrayList); // - show parsed string intermediate stage
 
+        for(int i=0; i<expressionAsArrayList.size(); i++) {
+            String s=expressionAsArrayList.get(i);
+            if(digitFinder(s)) {
+                if(s.charAt(0)==' ') {
+                    s=s.substring(1);
+                }
+                if(s.charAt(s.length()-1)==' ') {
+                    s=s.substring(0, s.length()-1);
+                }
+                expressionAsArrayList.set(i, s);
+            } else {
+                s=s.replace(" ", "");
+                expressionAsArrayList.set(i, s);
+            }
+        }
+
+        for(int i=0; i<expressionAsArrayList.size(); i++) {
+            String s = expressionAsArrayList.get(i);
+            if (s.equals("")) {
+                expressionAsArrayList.remove(i);
+            }
+        }
 
         if(expressionAsArrayList.get(0).equals("-")) {
             expressionAsArrayList.set(1, "-"+expressionAsArrayList.get(1));
             expressionAsArrayList.remove(0);
-        }
-
-        for(int i=0; i<expressionAsArrayList.size(); i++) {
-            String s=expressionAsArrayList.get(i);
-            if(s.equals(" ")) {
-                expressionAsArrayList.remove(i);
-            }
         }
 
         for(int i=2; i<expressionAsArrayList.size(); i++) {
@@ -204,35 +231,48 @@ public class DIYcalculator {
     }
 
 
-    private static void processOperator(LinkedList<Double> numbersStack, char operator) {
-        Double topNumber = numbersStack.removeLast();
-        Double nextTopNumber = numbersStack.removeLast();
+    private static void processOperator(LinkedList<String> numbersStack, char operator) {
+        BigDecimal topNumber=new BigDecimal(numbersStack.removeLast());
+        BigDecimal nextTopNumber=new BigDecimal(numbersStack.removeLast());
+        //Double topNumber = numbersStack.removeLast();
+        //Double nextTopNumber = numbersStack.removeLast();
         switch (operator) {
             case '+':
-                numbersStack.add(nextTopNumber + topNumber);
+                numbersStack.add(String.valueOf(nextTopNumber.add(topNumber)));
                 break;
             case '-':
-                numbersStack.add(nextTopNumber - topNumber);
+                numbersStack.add(String.valueOf(nextTopNumber.subtract(topNumber)));
                 break;
             case '*':
-                numbersStack.add(nextTopNumber * topNumber);
+                numbersStack.add(String.valueOf(nextTopNumber.multiply(topNumber)));
                 break;
             case '/':
-                numbersStack.add(nextTopNumber / topNumber);
+                double d=topNumber.doubleValue();
+                if(d==0) {
+                    System.out.println("Dividing by zero impossible");
+                    errorDetected=true;
+                    break;
+                }
+                numbersStack.add(String.valueOf(nextTopNumber.divide(topNumber, 16, BigDecimal.ROUND_HALF_UP)));
                 break;
             case '^':
-                numbersStack.add(Math.pow(nextTopNumber, topNumber));
+                double d1=topNumber.doubleValue();
+                double d2=nextTopNumber.doubleValue();
+                numbersStack.add(String.valueOf(Math.pow(d2, d1)));
                 break;
         }
     }
 
 
-    private static Double evaluate(ArrayList<String> expression) { // calculate with railway shunting yard method
-                                                                   // & reverse Polish notation
+    private static String evaluate(ArrayList<String> expressionAsArrayList) { // calculate with railway shunting yard method
+                                                                              // & reverse Polish notation
 
+        if(errorDetected) {
+            return "0";
+        }
         System.out.println("Parsed expression: "+expressionAsArrayList); // parsed input final stage
 
-        LinkedList<Double> operandsStack = new LinkedList<>();
+        LinkedList<String> operandsStack = new LinkedList<>();
         LinkedList<Character> operatorsStack = new LinkedList<>();
         for (int i = 0; i < expressionAsArrayList.size(); i++) {
             String s=expressionAsArrayList.get(i);
@@ -252,6 +292,7 @@ public class DIYcalculator {
                 // check is current number correct or not:
                 Pattern pattern
                         =Pattern.compile("^(\\s?\\-?(0|[1-9])\\d*\\s?)|(\\s?\\-?[1-9][0-9]*\\.\\d+\\s?)|(\\s?\\-?0\\.\\d+\\s?)");
+                        //=Pattern.compile("[-]?[0-9]+(.[0-9]+)?");
                         //=Pattern.compile("^.*"); // turn off numbers validity check
 
                 Matcher matcher=pattern.matcher(operand);
@@ -261,13 +302,12 @@ public class DIYcalculator {
                     errorDetected=true;
                     break;
                 }
-                operandsStack.add(Double.parseDouble(operand));
+                operandsStack.add(operand);
             }
         }
 
         if(errorDetected) {
-
-            return 0.0;
+            return "0";
         }
 
         while (!operatorsStack.isEmpty()) {
@@ -276,43 +316,47 @@ public class DIYcalculator {
         if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
             System.out.print("Error in the expression");
             errorDetected=true;
-            return 0.0;
+            return "0";
         }
         return operandsStack.get(0);
     }
 
 
     public static void main(String[] args) {
-        result=0.0;
+        System.out.println("For exit input: exit");
+        System.out.println("App supports brackets and mathematical operations: + , - , * , / , ^");
+        System.out.println("Input your mathematical expression below");
+        result="0";
 
-        //expression="(4 + 3) * 2 ^ -2"; // - inner input
+        //expression="00.2+2"; // - inner input
 
         scanner=new Scanner(System.in);
-        expression=scanner.nextLine();
-        scanner.close();
+        while (scanner.hasNextLine()) {
+            expression=scanner.nextLine();
 
-        inputBasicCheck(expression);
 
-        if(errorDetected) {
-            System.err.println("Input error: wrong input");
-        } else {
-            expression=modifyExpression(expression);
-            result=evaluate(expressionAsArrayList);
+            if(expression.equals("exit")) {
+                scanner.close();
+                return;
+            }
+
+            inputBasicCheck(expression);
 
             if(errorDetected) {
                 System.err.println("Input error: wrong input");
             } else {
-                System.out.println("Result: "+result);
-                if(result.isInfinite()) {
-                    System.err.println("Division by zero");
-                } else if(result.isNaN()) {
-                    System.err.println("Division of zero by zero or any other case which led to Not-a-Number result");
+                expression=modifyExpression(expression);
+                result=evaluate(expressionAsArrayList);
+
+                if(errorDetected) {
+                    System.err.println("Input error: wrong input");
+                } else {
+                    System.out.println("Result: "+result);
                 }
             }
         }
-
+        scanner.close();
     }
-
 }
 
 
