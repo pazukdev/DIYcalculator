@@ -15,7 +15,7 @@ public class DIYcalculator {
     private static ArrayList<String> expressionAsArrayList;
     private  static  String result;
 
-    private static boolean errorDetected = false;
+    private static boolean errorDetected;
     private static Scanner scanner;
 
     private static void inputBasicCheck(String expression) { // at first - check inputted expression for
@@ -32,6 +32,12 @@ public class DIYcalculator {
         int operatorCounter=0;
         int openBracketCounter=0;
         int closeBracketCounter=0;
+
+        if(expression.isEmpty()) {
+            System.out.println("Nothing has been entered");
+            errorDetected=true;
+            return;
+        }
 
         int i=0;
         while (i<expressionArray.length) {
@@ -62,14 +68,14 @@ public class DIYcalculator {
             i++;
         }
 
-        if(digitCounter==expression.length()) {
-            System.out.println("This is an incomplete mathematical expression: no operators");
+        if(digitCounter==0) {
+            System.out.println("This is incomplete mathematical expression: no operands");
             errorDetected=true;
             return;
         }
 
-        if(operatorCounter==expression.length()) {
-            System.out.println("This is incomplete mathematical expression: no operands");
+        if(operatorCounter==0) {
+            System.out.println("This is incomplete mathematical expression: no operators");
             errorDetected=true;
             return;
         }
@@ -234,8 +240,6 @@ public class DIYcalculator {
     private static void processOperator(LinkedList<String> numbersStack, char operator) {
         BigDecimal topNumber=new BigDecimal(numbersStack.removeLast());
         BigDecimal nextTopNumber=new BigDecimal(numbersStack.removeLast());
-        //Double topNumber = numbersStack.removeLast();
-        //Double nextTopNumber = numbersStack.removeLast();
         switch (operator) {
             case '+':
                 numbersStack.add(String.valueOf(nextTopNumber.add(topNumber)));
@@ -267,9 +271,6 @@ public class DIYcalculator {
     private static String evaluate(ArrayList<String> expressionAsArrayList) { // calculate with railway shunting yard method
                                                                               // & reverse Polish notation
 
-        if(errorDetected) {
-            return "0";
-        }
         System.out.println("Parsed expression: "+expressionAsArrayList); // parsed input final stage
 
         LinkedList<String> operandsStack = new LinkedList<>();
@@ -282,9 +283,10 @@ public class DIYcalculator {
                 while (operatorsStack.getLast() != '(')
                     processOperator(operandsStack, operatorsStack.removeLast());
                 operatorsStack.removeLast();
-            } else if (s.length()==1 && isOperator(s.charAt(0))) {
-                while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s.charAt(0)))
+            } else if (isOperator(s.charAt(0)) && s.length()==1) {
+                while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s.charAt(0))) {
                     processOperator(operandsStack, operatorsStack.removeLast());
+                }
                 operatorsStack.add(s.charAt(0));
             } else {
                 String operand=s;
@@ -292,7 +294,6 @@ public class DIYcalculator {
                 // check is current number correct or not:
                 Pattern pattern
                         =Pattern.compile("^(\\s?\\-?(0|[1-9])\\d*\\s?)|(\\s?\\-?[1-9][0-9]*\\.\\d+\\s?)|(\\s?\\-?0\\.\\d+\\s?)");
-                        //=Pattern.compile("[-]?[0-9]+(.[0-9]+)?");
                         //=Pattern.compile("^.*"); // turn off numbers validity check
 
                 Matcher matcher=pattern.matcher(operand);
@@ -300,17 +301,13 @@ public class DIYcalculator {
                 if(!matcher.matches()) {
                     System.out.println("Wrong format of number detected: "+operand);
                     errorDetected=true;
-                    break;
+                    return "-";
                 }
                 operandsStack.add(operand);
             }
         }
 
-        if(errorDetected) {
-            return "0";
-        }
-
-        while (!operatorsStack.isEmpty()) {
+        while (!operatorsStack.isEmpty() && !errorDetected) {
             processOperator(operandsStack, operatorsStack.removeLast());
         }
         if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
@@ -318,7 +315,11 @@ public class DIYcalculator {
             errorDetected=true;
             return "0";
         }
-        return operandsStack.get(0);
+        if(errorDetected) {
+            return "0";
+        } else {
+            return operandsStack.get(0);
+        }
     }
 
 
@@ -326,14 +327,14 @@ public class DIYcalculator {
         System.out.println("For exit input: exit");
         System.out.println("App supports brackets and mathematical operations: + , - , * , / , ^");
         System.out.println("Input your mathematical expression below");
-        result="0";
+        result="-";
 
         //expression="00.2+2"; // - inner input
 
         scanner=new Scanner(System.in);
         while (scanner.hasNextLine()) {
+            errorDetected=false;
             expression=scanner.nextLine();
-
 
             if(expression.equals("exit")) {
                 scanner.close();
@@ -355,7 +356,6 @@ public class DIYcalculator {
                 }
             }
         }
-        scanner.close();
     }
 }
 
