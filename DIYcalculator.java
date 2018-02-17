@@ -2,6 +2,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -291,57 +293,63 @@ public class DIYcalculator {
 
         System.out.println("Parsed expression: "+expressionAsArrayList); // parsed input final stage
 
-        LinkedList<String> operandsStack = new LinkedList<>();
-        LinkedList<String> operatorsStack = new LinkedList<>();
-        for (int i = 0; i < expressionAsArrayList.size(); i++) {
-            String s=expressionAsArrayList.get(i);
-            if (s.equals("("))
-                operatorsStack.add(s);
-            else if (s.equals(")")) {
-                while (!operatorsStack.getLast().equals("("))
-                    processOperator(operandsStack, operatorsStack.removeLast());
-                operatorsStack.removeLast();
-            } else if (isOperator(s) && s.length()==1) {
-                while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s)) {
-                    processOperator(operandsStack, operatorsStack.removeLast());
+        try {
+
+            LinkedList<String> operandsStack = new LinkedList<>();
+            LinkedList<String> operatorsStack = new LinkedList<>();
+            for (int i = 0; i < expressionAsArrayList.size(); i++) {
+                String s=expressionAsArrayList.get(i);
+                if (s.equals("("))
+                    operatorsStack.add(s);
+                else if (s.equals(")")) {
+                    while (!operatorsStack.getLast().equals("("))
+                        processOperator(operandsStack, operatorsStack.removeLast());
+                    operatorsStack.removeLast();
+                } else if (isOperator(s) && s.length()==1) {
+                    while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s)) {
+                        processOperator(operandsStack, operatorsStack.removeLast());
+                    }
+                    operatorsStack.add(s);
+                } else {
+                    String operand=s;
+
+                    // check is current number correct or not:
+                    Pattern pattern
+                            =Pattern.compile("^(\\s?\\-?(0|[1-9])\\d*\\s?)|(\\s?\\-?[1-9][0-9]*\\.\\d+\\s?)|(\\s?\\-?0\\.\\d+\\s?)");
+                            //=Pattern.compile("^.*"); // turn off numbers validity check
+
+                    Matcher matcher=pattern.matcher(operand);
+
+                    if(!matcher.matches()) {
+                        System.out.println("Wrong format of number detected: "+operand);
+                        errorDetected=true;
+                        return "-";
+                    }
+                    operandsStack.add(operand);
                 }
-                operatorsStack.add(s);
-            } else {
-                String operand=s;
-
-                // check is current number correct or not:
-                Pattern pattern
-                        =Pattern.compile("^(\\s?\\-?(0|[1-9])\\d*\\s?)|(\\s?\\-?[1-9][0-9]*\\.\\d+\\s?)|(\\s?\\-?0\\.\\d+\\s?)");
-                        //=Pattern.compile("^.*"); // turn off numbers validity check
-
-                Matcher matcher=pattern.matcher(operand);
-
-                if(!matcher.matches()) {
-                    System.out.println("Wrong format of number detected: "+operand);
-                    errorDetected=true;
-                    return "-";
-                }
-                operandsStack.add(operand);
             }
-        }
 
-        while (!operatorsStack.isEmpty() && !errorDetected) {
-            processOperator(operandsStack, operatorsStack.removeLast());
-        }
-        if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
-            System.out.print("Error in the expression");
+            while (!operatorsStack.isEmpty() && !errorDetected) {
+                processOperator(operandsStack, operatorsStack.removeLast());
+            }
+            if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
+                System.out.print("Error in the expression");
+                errorDetected=true;
+                return "0";
+            }
+            if(errorDetected) {
+                return "0";
+            } else {
+                return operandsStack.get(0);
+            }
+        } catch (Exception e) {
             errorDetected=true;
             return "0";
-        }
-        if(errorDetected) {
-            return "0";
-        } else {
-            return operandsStack.get(0);
         }
     }
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         System.out.println("For exit input: exit");
         System.out.println("App supports brackets and mathematical operations: + , - , * , / , ^");
         System.out.println("Input your mathematical expression below");
