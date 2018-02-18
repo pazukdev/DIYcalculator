@@ -136,13 +136,13 @@ public class DIYcalculator {
                 System.out.println("Wrong start of the expression: "+s0
                         +" Expression can't start with + , * , / or ^");
                 return;
-            } else if(!s1.equals("(") || !digitFinder(s1)) {
-                errorDetected=true;
-                System.out.println("Wrong expression. Expression can't have such a sequence of operators:"+s0+s1 );
-                return;
             } else if(digitFinder(s1)) {
                 expressionAsArrayList.set(1, "-"+s1);
                 expressionAsArrayList.remove(0);
+            } else {
+                errorDetected = true;
+                System.out.println("Wrong expression. Expression can't start with such a sequence of operators:" + s0 + s1);
+                return;
             }
         }
 
@@ -197,7 +197,7 @@ public class DIYcalculator {
             }
         }
 
-        if(operatorCounter!=operandCounter-1) {
+        if(operatorCounter>operandCounter) {
             System.out.println("This is incomplete mathematical expression: number of operators doesn't match" +
                     "number of operands");
         }
@@ -272,8 +272,8 @@ public class DIYcalculator {
                 break;
             case "/":
                 double d=topNumber.doubleValue();
-                if(d==0) {
-                    System.out.println("Dividing by zero impossible");
+                if(d==0) { // dividing by zero manual check
+                    System.out.println("Dividing by zero impossible: "+nextTopNumber+"/"+0);
                     errorDetected=true;
                     break;
                 }
@@ -293,59 +293,52 @@ public class DIYcalculator {
 
         System.out.println("Parsed expression: "+expressionAsArrayList); // parsed input final stage
 
-        try {
-
-            LinkedList<String> operandsStack = new LinkedList<>();
-            LinkedList<String> operatorsStack = new LinkedList<>();
-            for (int i = 0; i < expressionAsArrayList.size(); i++) {
-                String s=expressionAsArrayList.get(i);
-                if (s.equals("("))
-                    operatorsStack.add(s);
-                else if (s.equals(")")) {
-                    while (!operatorsStack.getLast().equals("("))
-                        processOperator(operandsStack, operatorsStack.removeLast());
-                    operatorsStack.removeLast();
-                } else if (isOperator(s) && s.length()==1) {
-                    while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s)) {
-                        processOperator(operandsStack, operatorsStack.removeLast());
-                    }
-                    operatorsStack.add(s);
-                } else {
-                    String operand=s;
-
-                    // check is current number correct or not:
-                    Pattern pattern
-                            =Pattern.compile("^(\\s?\\-?(0|[1-9])\\d*\\s?)|(\\s?\\-?[1-9][0-9]*\\.\\d+\\s?)|(\\s?\\-?0\\.\\d+\\s?)");
-                            //=Pattern.compile("^.*"); // turn off numbers validity check
-
-                    Matcher matcher=pattern.matcher(operand);
-
-                    if(!matcher.matches()) {
-                        System.out.println("Wrong format of number detected: "+operand);
-                        errorDetected=true;
-                        return "-";
-                    }
-                    operandsStack.add(operand);
+        LinkedList<String> operandsStack = new LinkedList<>();
+        LinkedList<String> operatorsStack = new LinkedList<>();
+        for (int i = 0; i < expressionAsArrayList.size(); i++) {
+            String s=expressionAsArrayList.get(i);
+            if (s.equals("("))
+                operatorsStack.add(s);
+            else if (s.equals(")")) {
+                while (!operatorsStack.getLast().equals("("))
+                    processOperator(operandsStack, operatorsStack.removeLast());
+                operatorsStack.removeLast();
+            } else if (isOperator(s) && s.length()==1) {
+                while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s)) {
+                    processOperator(operandsStack, operatorsStack.removeLast());
                 }
-            }
-
-            while (!operatorsStack.isEmpty() && !errorDetected) {
-                processOperator(operandsStack, operatorsStack.removeLast());
-            }
-            if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
-                System.out.print("Error in the expression");
-                errorDetected=true;
-                return "0";
-            }
-            if(errorDetected) {
-                return "0";
+                operatorsStack.add(s);
             } else {
-                return operandsStack.get(0);
+                String operand=s;
+
+                // check is current number correct or not:
+                Pattern patternMainCheck
+                        =Pattern.compile("^(\\-?(0|[1-9]\\d*))|(\\-?[1-9][0-9]*\\.\\d+)|(\\-?0\\.\\d+)");
+                        //=Pattern.compile("^.*"); // turn off numbers validity manual check
+                Matcher matcher=patternMainCheck.matcher(operand);
+                if(!matcher.matches()) {
+                    System.out.println("Wrong format of number detected: "+operand);
+                    errorDetected=true;
+                    return "0";
+                }
+                operandsStack.add(operand);
             }
-        } catch (Exception e) {
+        }
+
+        while (!operatorsStack.isEmpty() && !errorDetected) {
+            processOperator(operandsStack, operatorsStack.removeLast());
+        }
+        if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
+            System.out.print("Error in the expression");
             errorDetected=true;
             return "0";
         }
+        if(errorDetected) {
+            return "0";
+        } else {
+            return operandsStack.get(0);
+        }
+
     }
 
 
@@ -371,7 +364,19 @@ public class DIYcalculator {
                 modifyExpression(expression);
             }
             if(!errorDetected) {
-                result=evaluate(expressionAsArrayList);
+                try {
+                    result=evaluate(expressionAsArrayList);
+                } catch (NumberFormatException e) {
+                    errorDetected=true;
+                    System.out.println(e);
+                } catch (ArithmeticException e) {
+                    errorDetected=true;
+                    System.out.println(e);
+                } catch (Exception e) {
+                    errorDetected=true;
+                    System.out.println(e);
+                }
+
             }
             if(!errorDetected) {
                 System.out.println("Result: "+result);
