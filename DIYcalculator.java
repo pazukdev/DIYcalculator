@@ -2,8 +2,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,33 +9,44 @@ import java.util.regex.Pattern;
  * Created by Pazuk on 12.02.2018.
  */
 
+    //Plan:
+    // #1. Check stage#1: check inputed expression for some elementary errors
+    // #2. Parse expression
+    // #3. Check stage#2: check parsed expression
+    // #4. Bring expression to postfix notation form with shunting-yard algorithm and evaluate it
+
 public class DIYcalculator {
 
     private static String expression;
     private static ArrayList<String> expressionAsArrayList;
     private  static  String result;
 
-    private static boolean errorDetected;
+    private static boolean errorDetected; // if any error detected at any stage of processing of inputed
+                                          // expression - stop processing and output error
     private static Scanner scanner;
 
-    private static void inputBasicCheck(String expression) { // at first - check inputted expression for
-                                                             // some elementary syntax errors
+    private static void inputBasicCheck(String expression) { // #1. Check stage#1: check inputed expression for some
+                                                             // elementary errors
 
         Pattern patternValidCharacters=Pattern.compile("^[0-9\\s\\(\\)\\*\\+\\.,^/-]");
         Matcher matcher;
 
-        String[] expressionArray=expression.split("");
-
-        if(expression.isEmpty()) {
+        if(expression.isEmpty()) { // check for empty input
             System.out.println("Nothing has been entered");
             errorDetected=true;
             return;
         }
 
+        if(expression.length()<3) { // check if inputed expression is not too short for be an expression
+            System.out.println("This is incomplete mathematical expression");
+            errorDetected=true;
+        }
+
+        String[] expressionArray=expression.split("");
         int i=0;
         while (i<expressionArray.length) {
             matcher=patternValidCharacters.matcher(expressionArray[i]);
-            if(!matcher.matches()) {
+            if(!matcher.matches()) { // check for not allowed characters in expression
                 System.out.println("Wrong expression input. Not allowed character detected: "+expressionArray[i]);
                 errorDetected=true;
                 return;
@@ -46,31 +55,13 @@ public class DIYcalculator {
             i++;
         }
 
-        if(expression.length()<3) {
-            System.out.println("This is incomplete mathematical expression");
-            errorDetected=true;
-        }
     }
 
-    private static boolean digitFinder(String s) {
-        String[] stringList=s.split("");
-        for(int i=0; i<s.length(); i++) {
-            if(stringList[i].matches("[0-9]")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-    private static void modifyExpression(String expression) { // change inputed expression to the form convenient for
-                                                              // further processing and evaluating with shunting yard
-                                                              // method, postfix notation and postfix evaluation
-                                                              // algorithm
-        expression=expression.replace(',', '.');
+    private static void parseExpression(String expression) { // #2. Parse expression
+        expression=expression.replace(',', '.'); // according with task input of 0,1 should be same valid as 0.1
 
         expressionAsArrayList =new ArrayList<>();
-
+        // parsing:
         int u=0;
         for (int i = 0; i < expression.length(); i++) {
             String s=Character.toString(expression.charAt(i));
@@ -99,7 +90,8 @@ public class DIYcalculator {
 
         for(int i=0; i<expressionAsArrayList.size(); i++) {
             String s=expressionAsArrayList.get(i);
-            if(digitFinder(s)) {
+            if(digitFinder(s)) { // if element in array is number - remove spaces before and after number. Not in the
+                                 // number
                 if(s.charAt(0)==' ') {
                     s=s.substring(1);
                 }
@@ -107,7 +99,7 @@ public class DIYcalculator {
                     s=s.substring(0, s.length()-1);
                 }
                 expressionAsArrayList.set(i, s);
-            } else {
+            } else { // if element in array is operator or bracket or element with spaces only -remove all the spaces
                 s=s.replace(" ", "");
                 expressionAsArrayList.set(i, s);
             }
@@ -115,12 +107,14 @@ public class DIYcalculator {
 
         for(int i=0; i<expressionAsArrayList.size(); i++) {
             String s = expressionAsArrayList.get(i);
-            if (s.equals("")) {
+            if (s.equals("")) { // remove all empty elements
                 expressionAsArrayList.remove(i);
             }
         }
 
-        if(expressionAsArrayList.size()<3) {
+        // #3. Check stage#2: check parsed expression:
+
+        if(expressionAsArrayList.size()<3) { // this expression theoretically is too short to be expression
             System.out.println("This is incomplete mathematical expression");
             errorDetected=true;
             return;
@@ -130,7 +124,7 @@ public class DIYcalculator {
         String s1=expressionAsArrayList.get(1);
         String s2=expressionAsArrayList.get(2);
 
-        if(isOperator(s0)) {
+        if(isOperator(s0)) { // check begin of expression
             if(!s0.equals("-")) {
                 errorDetected=true;
                 System.out.println("Wrong start of the expression: "+s0
@@ -172,12 +166,15 @@ public class DIYcalculator {
                 errorDetected=true;
                 System.out.println("Wrong expression. Expression can't have such a sequence of operators:"+s0+s1 );
                 return;
-            } else if(s1.equals("-") && digitFinder(s2) && (isOperator(s0) || s0.equals("("))) {
-                s1=s1+s2;
+            } else if(s1.equals("-") && digitFinder(s2) && (isOperator(s0) || s0.equals("("))) { // detecting elements
+                          // where "-" is not operator in binary expression, but is part of negative number
+                s1=s1+s2; // and uniting them: before: [ -, 1], after: [-1]
                 expressionAsArrayList.set(i-1, s1);
                 expressionAsArrayList.remove(i);
             }
         }
+
+        // count how much different elements in expression...
 
         int operandCounter=0;
         int operatorCounter=0;
@@ -196,6 +193,8 @@ public class DIYcalculator {
                 operandCounter++;
             }
         }
+
+        //...and draw some conclusions from result of counting:
 
         if(operatorCounter>operandCounter) {
             System.out.println("This is incomplete mathematical expression: number of operators doesn't match" +
@@ -225,6 +224,73 @@ public class DIYcalculator {
             i++;
         }
 
+    }
+
+
+    private static String evaluate(ArrayList<String> expressionAsArrayList) { // #4. Bring expression to postfix
+                                                                              // notation form with shunting-yard
+                                                                              // algorithm and evaluate it
+
+        System.out.println("Parsed expression: "+expressionAsArrayList); // parsed input final stage
+
+        LinkedList<String> operandsStack = new LinkedList<>();
+        LinkedList<String> operatorsStack = new LinkedList<>();
+        for (int i = 0; i < expressionAsArrayList.size(); i++) {
+            String s=expressionAsArrayList.get(i);
+            if (s.equals("("))
+                operatorsStack.add(s);
+            else if (s.equals(")")) {
+                while (!operatorsStack.getLast().equals("("))
+                    processOperator(operandsStack, operatorsStack.removeLast());
+                operatorsStack.removeLast();
+            } else if (isOperator(s) && s.length()==1) {
+                while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s)) {
+                    processOperator(operandsStack, operatorsStack.removeLast());
+                }
+                operatorsStack.add(s);
+            } else {
+                String operand=s; // if element is not operator or bracket - so it is operand
+
+                // check is current number correct or not:
+                Pattern patternMainCheck
+                        =Pattern.compile("^(\\-?(0|[1-9]\\d*))|(\\-?[1-9][0-9]*\\.\\d+)|(\\-?0\\.\\d+)");// manual check
+                        //=Pattern.compile("^.*"); // turn off numbers validity manual check
+                Matcher matcher=patternMainCheck.matcher(operand);
+                if(!matcher.matches()) {
+                    System.out.println("Wrong format of number detected: "+operand);
+                    errorDetected=true;
+                    return "0";
+                }
+                operandsStack.add(operand);
+            }
+        }
+
+        while (!operatorsStack.isEmpty() && !errorDetected) {
+            processOperator(operandsStack, operatorsStack.removeLast());
+        }
+        if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
+            System.out.print("Error in the expression");
+            errorDetected=true;
+            return "0";
+        }
+        if(errorDetected) {
+            return "0";
+        } else {
+            return operandsStack.get(0);
+        }
+
+    }
+
+    // auxiliary methods begin
+
+    private static boolean digitFinder(String s) {
+        String[] stringList=s.split("");
+        for(int i=0; i<s.length(); i++) {
+            if(stringList[i].matches("[0-9]")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isOperator(String s) {
@@ -287,59 +353,7 @@ public class DIYcalculator {
         }
     }
 
-
-    private static String evaluate(ArrayList<String> expressionAsArrayList) { // calculate with railway shunting yard method
-                                                                              // & reverse Polish notation
-
-        System.out.println("Parsed expression: "+expressionAsArrayList); // parsed input final stage
-
-        LinkedList<String> operandsStack = new LinkedList<>();
-        LinkedList<String> operatorsStack = new LinkedList<>();
-        for (int i = 0; i < expressionAsArrayList.size(); i++) {
-            String s=expressionAsArrayList.get(i);
-            if (s.equals("("))
-                operatorsStack.add(s);
-            else if (s.equals(")")) {
-                while (!operatorsStack.getLast().equals("("))
-                    processOperator(operandsStack, operatorsStack.removeLast());
-                operatorsStack.removeLast();
-            } else if (isOperator(s) && s.length()==1) {
-                while (!operatorsStack.isEmpty() && priority(operatorsStack.getLast()) >= priority(s)) {
-                    processOperator(operandsStack, operatorsStack.removeLast());
-                }
-                operatorsStack.add(s);
-            } else {
-                String operand=s;
-
-                // check is current number correct or not:
-                Pattern patternMainCheck
-                        =Pattern.compile("^(\\-?(0|[1-9]\\d*))|(\\-?[1-9][0-9]*\\.\\d+)|(\\-?0\\.\\d+)");
-                        //=Pattern.compile("^.*"); // turn off numbers validity manual check
-                Matcher matcher=patternMainCheck.matcher(operand);
-                if(!matcher.matches()) {
-                    System.out.println("Wrong format of number detected: "+operand);
-                    errorDetected=true;
-                    return "0";
-                }
-                operandsStack.add(operand);
-            }
-        }
-
-        while (!operatorsStack.isEmpty() && !errorDetected) {
-            processOperator(operandsStack, operatorsStack.removeLast());
-        }
-        if(operandsStack.size()>1 && !operatorsStack.isEmpty()) {
-            System.out.print("Error in the expression");
-            errorDetected=true;
-            return "0";
-        }
-        if(errorDetected) {
-            return "0";
-        } else {
-            return operandsStack.get(0);
-        }
-
-    }
+    // auxiliary methods end
 
 
     public static void main(String[] args) throws Exception {
@@ -348,20 +362,20 @@ public class DIYcalculator {
         System.out.println("Input your mathematical expression below");
         result="-";
 
-        //expression="00.2+2"; // - inner input
+        //expression="(17 ^ 4 + 5 * 974 ^ 33 + 2.24 * 4.75)^0"; // - inner input instead of console
 
         scanner=new Scanner(System.in);
         while (scanner.hasNextLine()) {
             errorDetected=false;
             expression=scanner.nextLine();
 
-            if(expression.equals("exit")) {
+            if(expression.equals("exit") || expression.equals("EXIT") || expression.equals("Exit")) {
                 scanner.close();
                 return;
             }
             inputBasicCheck(expression);
             if(!errorDetected) {
-                modifyExpression(expression);
+                parseExpression(expression);
             }
             if(!errorDetected) {
                 try {
@@ -372,7 +386,8 @@ public class DIYcalculator {
                 } catch (ArithmeticException e) {
                     errorDetected=true;
                     System.out.println(e);
-                } catch (Exception e) {
+                } catch (Exception e) { // catch exceptions what was not prevented by expression check stage#1,
+                                        // check stage#2 and manual check for correct numbers
                     errorDetected=true;
                     System.out.println(e);
                 }
